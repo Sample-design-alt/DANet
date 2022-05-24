@@ -17,48 +17,48 @@ length = 1536 * 2
 writer = SummaryWriter('runs/exp')
 # 实例化这个类，然后我们就得到了Dataset类型的数据，记下来就将这个类传给DataLoader，就可以了。
 
-parser = argparse.ArgumentParser(description='DA-Net for TSC')
+parser = argparse.ArgumentParser(description='DA-Net for MTSC')
 
 parser.add_argument('--model', type=str, default='DA-Net')
 parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu')
 parser.add_argument('--length', type=int, default=8192, help='Embedding length')
 parser.add_argument('--writer_path', type=str, default='runs/exp', help='TensorBoard path')
 parser.add_argument('--data_path', type=str, default='./data')
-parser.add_argument('--seed', type=int, default=40, help='random seed')
+parser.add_argument('--seed', type=int, default=1, help='random seed')
 parser.add_argument('--dropout', type=float, default=0.05, help='attention dropout rate')
-parser.add_argument('--batch_size', type=int, default=32)
+parser.add_argument('--batch_size', type=int, default=16)
 parser.add_argument('--n_epochs', type=int, default=100)
 parser.add_argument('--cache_path', type=str, default='./cache')
 parser.add_argument('--window', type=int, default=64)  # [32,48,64,80,96]
+parser.add_argument('--M_name', type=str, default='DA-Net')
 
 args = parser.parse_args()
-
+M_name=args.M_name
 writer = SummaryWriter(args.writer_path)  #visualize
 random_seed(args.seed)
 
 
-def GetDataAndNet(archive_path, archive_name, wa, prob, mask):
+def GetDataAndNet(archive_path, archive_name, wa, prob, mask=1):
     train_loader, test_loader, num_class = load_UEA(archive, args)
 
-    # 得到时间序列的长度和channel
+    # get the length and channel of time series
     time_stmp = train_loader.__iter__().next()[0].shape[2]
     in_channel = train_loader.__iter__().next()[0].shape[1]
     # num_class = DealDataset(train_path).num_class()
 
     net = DA_Net(
         t=time_stmp,
-        down_dim=length,  # 时间戳线性变化成4096,
+        down_dim=length,
         hidden_dim=(96, 192, 62),
-        layers=(2, 6, 2),
-        # layers=(2, 2, 6, 2),
-        # heads=(3, 6, 12, 24),
-        heads=(3, 6, 12),
-        channels=in_channel,  # MTS问题，需要修改
+        layers=(2, 2, 6, 2),
+
+        heads=(3, 6, 12,24),
+        channels=in_channel,
         num_classes=num_class,
         head_dim=32,
-        window_size=args.window,  # 代表了一个window要计算多少个qk 16*16    (informer要把这个值设大，才有用)
-        downscaling_factors=(4, 2, 2),  # 代表多长的时间作为一个特征
-        # downscaling_factors=(4, 2, 2, 2),             #代表多长的时间作为一个特征
+        window_size=args.window,
+        downscaling_factors=(4, 2, 2,2),  # 代表多长的时间作为一个特征
+
         relative_pos_embedding=True,
         wa=wa,
         prob=prob,
@@ -102,7 +102,7 @@ def test(epoch):
         score_list.extend(pred_y.detach().cpu().numpy())
         label_list.extend(y.cpu().numpy())
 
-    plot_roc(M_name, num_class, label_list, score_list, L=length)
+    plot_roc( num_class, label_list, score_list, L=length)
 
     f1_score, precision, recall = compute_F1_score(total_true, total_pred)
 
@@ -178,82 +178,54 @@ def train(optimizer):
               'acc_test: {:.4f}'.format(total_test_acc / test_loader.dataset.__len__()),
               'time: {:.4f}s'.format(time.time() - s_time))
     plt.plot()
+
+    if os.path.exists(f'result') == False:
+        os.makedirs(f'result')
     save_result(file, ls[-1], total_test_acc / test_loader.dataset.__len__(), f1_score, precision, recall, train_time,
                 inference_time, args.window, length)
 
 
-def model_name(wa, prob, mask):
-    if wa == 0:
-        if prob == 0:
-            if mask == 0:
-                name = 'WA+SA+SWM'
-            else:
-                name = 'WA+SA'
-        else:
-            if mask == 0:
-                name = 'WA+SWM'
-            else:
-                name = 'WA'
-    else:
-        if prob == 0:
-            if mask == 0:
-                name = 'SA+SWM'
-            else:
-                name = 'SA'
-        else:
-            if mask == 0:
-                name = 'SWM'
-            else:
-                name = 'WiWo transformer'
-    return name
 
-
+wa=1
+prob=1
 if __name__ == '__main__':
-    for wa in range(1, 2):
-        for prob in range(1, 2):
-            for mask in range(1, 2):
-                M_name = model_name(wa, prob, mask)
-                # archives = glob.glob(r'D:/FTP/chengrj/time_series/data/Multivariate_arff/*')
-                # for archive_path in archives:
-                # archive = os.path.split(archive_path)[-1]
 
-                # archive = 'FaceDetection'
-                # archive = 'AtrialFibrillation'
-                # archive = 'PEMS-SF'
-                # archive = 'CharacterTrajectories'
-                archive = 'SpokenArabicDigits'
+    # archives = glob.glob(r'D:/FTP/chengrj/time_series/data/Multivariate_arff/*')
+    # for archive_path in archives:
+    # archive = os.path.split(archive_path)[-1]
 
-                print(archive)
-                file = r'./second_result/result_{0}_{1}_{2}_{3}.csv'.format(str(wa), str(prob),
-                                                                            str(mask), archive)
-                train_loader, test_loader, net, num_class = GetDataAndNet(0, archive, wa, prob, mask)
+    archive = 'FaceDetection'
+    # archive = 'PEMS-SF'
+    print(archive)
+    file = r'./result/result_{0}.csv'.format(archive)
+    train_loader, test_loader, net, num_class = GetDataAndNet(0, archive, wa, prob)
 
-                # for param in net.parameters():
-                #     print(param)
-                # print(np.sum([np.prod(x.size()) for x in net.parameters()]))
+    # for param in net.parameters():
+    #     print(param)
+    # print(np.sum([np.prod(x.size()) for x in net.parameters()]))
 
-                LEARNING_RATE = 0.001
-                optimizer = torch.optim.Adam(
-                    net.parameters(),
-                    lr=10,
-                    betas=(0.9, 0.999),
-                    eps=1e-08
-                )
-                global_epoch = 0
-                global_step = 0
-                best_tst_accuracy = 0.0
-                COMPUTE_TRN_METRICS = True
-                n_epochs = args.n_epochs
+    LEARNING_RATE = 0.001
+    optimizer = torch.optim.Adam(
+        net.parameters(),
+        lr=10,
+        betas=(0.9, 0.999),
+        eps=1e-08
+    )
+    global_epoch = 0
+    global_step = 0
+    best_tst_accuracy = 0.0
+    COMPUTE_TRN_METRICS = True
+    n_epochs = args.n_epochs
 
-                loss_func = torch.nn.CrossEntropyLoss()
+    loss_func = torch.nn.CrossEntropyLoss()
 
-                train(optimizer)
-                # except:
-                #     file = r'./result/result_{0}_{1}_{2}_{3}.csv'.format(str(wa), str(prob), str(mask),
-                #                                                          archive)
-                #     with open(file, 'a+') as f:
-                #         f.write('error\n')
-                #     continue
+    train(optimizer)
+    # except:
+    #     file = r'./result/result_{0}_{1}_{2}_{3}.csv'.format(str(wa), str(prob), str(mask),
+    #                                                          archive)
+    #     with open(file, 'a+') as f:
+    #         f.write('error\n')
+    #     continue
 
 
 
