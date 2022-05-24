@@ -81,7 +81,7 @@ def random_seed(seed):
     torch.backends.cudnn.enabled = False
 
 
-def plot_roc(name, num_class, label_list, score_list, L):
+def plot_roc( num_class, label_list, score_list, L):
     score_array = np.array(score_list)
     label_tensor = torch.tensor(label_list)
     label_tensor = label_tensor.reshape((label_tensor.shape[0], 1))
@@ -142,5 +142,8 @@ def plot_roc(name, num_class, label_list, score_list, L):
     plt.xticks(fontsize=22)
     plt.yticks(fontsize=22)
     plt.legend(loc="lower right", fontsize=15)
-    plt.savefig('Image/{0}_window_64.pdf'.format(name), format='pdf')
+
+    if os.path.exists(f'Image/') == False:
+        os.makedirs(f'Image')
+    plt.savefig('Image/DA_Net_window_64.pdf', format='pdf')
     # plt.show()

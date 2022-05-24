@@ -155,10 +155,8 @@ class WindowAttention(nn.Module):
 
             attn = self.dropout(dots.softmax(dim=-1))
             out = einsum('b h w i j, b h w j d -> b h w i d', attn, v)
-            # print('attention的时间为:',time.time()-start_time)
         else:
             scores_top, index = self._compute_q_k(q, k)
-            # print('计算top-K的时间为：',time.time()-start_time)
             scores_top = scores_top * self.scale
             if self.relative_pos_embedding:
                 scores_top += self.pos_embedding[self.relative_indices[index].to(torch.long)]
@@ -169,7 +167,6 @@ class WindowAttention(nn.Module):
                 scores_top[:, :, -new_p:] += self.left_mask[index]
             context = self._get_initial_context(v, self.window_size)
             out = self._update_context(context, v, scores_top, index)
-            # print('prob attention的时间为：',time.time()-start_time)
         out = rearrange(out, 'b head patch window_size dim -> b (patch window_size) (head dim)',
                         head=h)
 
@@ -230,7 +227,7 @@ class WindowAttention(nn.Module):
         context_in[torch.arange(B)[:, None, None, None],
         torch.arange(H)[None, :, None, None],
         torch.arange(P)[None, None, :, None],
-        index, :] = torch.matmul(attn, V).type_as(context_in)  # 选取那top-K个的index，不是top-K的用均值代替
+        index, :] = torch.matmul(attn, V).type_as(context_in)
 
         return context_in
 
@@ -361,18 +358,10 @@ class DA_Net(nn.Module):
         )
 
     def forward(self, ts):
-        # ts = ts.transpose(2,1)  #B,C,L  --> B,C,L
         ds = self.downsample(ts)  # B,C,L'
         x = ds.transpose(2, 1)
-
         for Encoder in self.EncoderList:
-            # print('x before',x.shape)
             x = Encoder(x)
-            # print('x after',x.shape)
-        # x = self.stage1(x)
-        # x = self.stage2(x)
-        # encoder = self.stage3(x)
-        # encoder = self.stage4(x)
         encoder = x
         output = encoder.mean(dim=[1])
         return ds, encoder, output, self.mlp_head(output)
