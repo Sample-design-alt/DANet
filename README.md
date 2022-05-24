@@ -17,7 +17,7 @@
 
 ## Datasets
 
-To save time, we recommend to download the FaceDetection dataset from the [here ]([https://](https://drive.google.com/file/d/1-XnZ-ZEqoaoJCOqSnFHMZiTYmKuOQGoa/view?usp=sharing)). The overall 30 UEA datasets can be download from [here](http://www.timeseriesclassification.com).
+To save time, we recommend to download the FaceDetection dataset from the [here ](https://drive.google.com/file/d/1-XnZ-ZEqoaoJCOqSnFHMZiTYmKuOQGoa/view?usp=sharing)](https://drive.google.com/file/d/1-XnZ-ZEqoaoJCOqSnFHMZiTYmKuOQGoa/view?usp=sharing). The overall 30 UEA datasets can be download from [here](http://www.timeseriesclassification.com).
 
 - Create the Folder 'data'.
 - unzip the 'FaceDetection' on the data folder.
